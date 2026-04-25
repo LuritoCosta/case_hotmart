@@ -1,0 +1,5 @@
+prod_item_id,product_id,item_quantity,purchase_value,prod_item_partition
+1,69,5,500.0,5
+5,69,120,1.0,0
+98736,37,69,25.0,6
+3,96,369,140.0,5

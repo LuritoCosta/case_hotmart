@@ -1,0 +1,5 @@
+purchase_id,buyer_id,prod_item_id,order_date,release_date,producer_id,purchase_partition,prod_item_partition,purchase_status
+55,15947,5,2022-12-01,2022-12-01,852852,5,5,APROVADA
+56,369798,746520,2022-12-25,2022-12-25,963963,6,0,APROVADA
+57,147,98736,2021-07-03,2021-07-03,963963,7,6,APROVADA
+58,986533,6565,2021-10-12,,200478,8,5,INICIADA
