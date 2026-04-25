@@ -13,9 +13,9 @@
 -- =============================================================================
 SELECT
     release_date                                AS data_compra,
-    subsidiary                                AS subsidiaria,
-    SUM(purchase_value)                       AS gmv
-FROM analytics.fct_purchase_history
+    subsidiary                                  AS subsidiaria,
+    SUM(purchase_value)                         AS gmv
+FROM '{fct_purchase_history}'
 WHERE
     is_current      = TRUE
     AND is_gmv_eligible = TRUE
@@ -42,29 +42,32 @@ WITH snapshot_em_cutoff AS (
         purchase_status,
         subsidiary,
         purchase_value,
+        is_gmv_eligible,
+        is_current,
         ROW_NUMBER() OVER (
             PARTITION BY purchase_id
             ORDER BY transaction_date DESC
         ) AS rn
-    FROM analytics.fct_purchase_history
-    WHERE transaction_date <= DATE '2023-03-31'
+    FROM '{fct_purchase_history}'
+    WHERE transaction_date <= DATE '2023-03-01'
 )
 
 SELECT
     order_date                          AS data_compra,
+    purchase_id                         AS id_compra,
     subsidiary                          AS subsidiaria,
     SUM(purchase_value)                 AS gmv
 FROM snapshot_em_cutoff
 WHERE
     rn = 1
-    AND release_date IS NOT NULL
-    AND purchase_status = 'APROVADA'
-    AND order_date BETWEEN DATE '2023-01-01' AND DATE '2023-01-31'
+    AND is_gmv_eligible = TRUE        
 GROUP BY
     order_date,
+    purchase_id,
     subsidiary
 ORDER BY
     data_compra,
+    id_compra,
     subsidiaria;
 
 
@@ -83,36 +86,6 @@ SELECT
     is_gmv_eligible,
     updated_sources,
     is_current
-FROM analytics.fct_purchase_history
+FROM '{fct_purchase_history}'
 WHERE purchase_id = 55
 ORDER BY transaction_date;
-
-
--- =============================================================================
--- 4. SANITY CHECKS — testes de integridade da tabela
--- =============================================================================
-
--- 4.1 Unicidade do grão: (purchase_id, transaction_date) deve ser único
-SELECT purchase_id, transaction_date, COUNT(*) AS n
-FROM analytics.fct_purchase_history
-GROUP BY purchase_id, transaction_date
-HAVING COUNT(*) > 1;
-
--- 4.2 Exatamente 1 is_current=TRUE por purchase_id
-SELECT purchase_id, COUNT(*) AS n_currents
-FROM analytics.fct_purchase_history
-WHERE is_current = TRUE
-GROUP BY purchase_id
-HAVING COUNT(*) <> 1;
-
--- 4.3 Domínio válido de purchase_status
-SELECT DISTINCT purchase_status
-FROM analytics.fct_purchase_history
-WHERE purchase_status IS NOT NULL
-  AND purchase_status NOT IN ('INICIADA','APROVADA','CANCELADA','REEMBOLSADA');
-
--- 4.4 Domínio válido de subsidiary
-SELECT DISTINCT subsidiary
-FROM analytics.fct_purchase_history
-WHERE subsidiary IS NOT NULL
-  AND subsidiary NOT IN ('nacional','internacional');

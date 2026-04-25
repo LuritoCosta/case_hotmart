@@ -1,11 +1,11 @@
 transaction_date,purchase_id,buyer_id,prod_item_id,order_date,release_date,producer_id,purchase_total_value,purchase_status,purchase_partition,prod_item_partition,product_id,purchase_value,subsidiary,is_current,is_gmv_eligible,updated_sources,etl_loaded_at
-2023-01-20,55,15947.0,5.0,2023-01-20,2023-01-20,852852.0,500.0,APROVADA,5.0,5.0,696969.0,50.0,,False,True,"purchase,product_item",2026-04-24 21:15:40
-2023-01-23,55,15947.0,5.0,2023-01-20,2023-01-20,852852.0,500.0,APROVADA,5.0,5.0,696969.0,50.0,nacional,False,True,purchase_extra_info,2026-04-24 21:15:40
-2023-02-05,55,160001.0,5.0,2023-01-20,2023-01-20,852852.0,500.0,APROVADA,5.0,5.0,696969.0,50.0,nacional,False,True,purchase,2026-04-24 21:15:40
-2023-07-12,55,160001.0,5.0,2023-01-20,2023-01-20,852852.0,500.0,APROVADA,5.0,5.0,696969.0,55.0,nacional,False,True,product_item,2026-04-24 21:15:40
-2023-07-15,55,160001.0,5.0,2023-01-20,2023-03-01,852852.0,550.0,APROVADA,5.0,5.0,696969.0,55.0,nacional,True,True,purchase,2026-04-24 21:15:40
-2023-01-25,56,,,,,,,,,,808080.0,2400.0,internacional,False,False,"product_item,purchase_extra_info",2026-04-24 21:15:40
-2023-01-26,56,369798.0,746520.0,2023-01-25,,963963.0,2400.0,INICIADA,6.0,0.0,808080.0,2400.0,internacional,True,False,purchase,2026-04-24 21:15:40
-2023-02-26,69,160001.0,18.0,2023-02-26,2023-02-28,96967.0,4000.0,APROVADA,7.0,8.0,373737.0,2000.0,,False,True,"purchase,product_item",2026-04-24 21:15:40
-2023-02-28,69,160001.0,18.0,2023-02-26,2023-02-28,96967.0,4000.0,APROVADA,7.0,8.0,373737.0,2000.0,nacional,False,True,purchase_extra_info,2026-04-24 21:15:40
-2023-03-12,69,160001.0,18.0,2023-02-26,2023-02-28,96967.0,4000.0,APROVADA,7.0,8.0,373737.0,2000.0,internacional,True,True,purchase_extra_info,2026-04-24 21:15:40
+2023-01-20,55,15947.0,5.0,2023-01-20,2023-01-20,852852.0,500.0,APROVADA,5.0,5.0,696969.0,50.0,,False,True,"purchase,product_item",2026-04-25 16:21:31
+2023-01-23,55,15947.0,5.0,2023-01-20,2023-01-20,852852.0,500.0,APROVADA,5.0,5.0,696969.0,50.0,nacional,False,True,purchase_extra_info,2026-04-25 16:21:31
+2023-02-05,55,160001.0,5.0,2023-01-20,2023-01-20,852852.0,500.0,APROVADA,5.0,5.0,696969.0,50.0,nacional,False,True,purchase,2026-04-25 16:21:31
+2023-07-12,55,160001.0,5.0,2023-01-20,2023-01-20,852852.0,500.0,APROVADA,5.0,5.0,696969.0,55.0,nacional,False,True,product_item,2026-04-25 16:21:31
+2023-07-15,55,160001.0,5.0,2023-01-20,2023-03-01,852852.0,550.0,APROVADA,5.0,5.0,696969.0,55.0,nacional,True,True,purchase,2026-04-25 16:21:31
+2023-01-25,56,,,,,,,,,,808080.0,2400.0,internacional,False,False,"product_item,purchase_extra_info",2026-04-25 16:21:31
+2023-01-26,56,369798.0,746520.0,2023-01-25,,963963.0,2400.0,INICIADA,6.0,0.0,808080.0,2400.0,internacional,True,False,purchase,2026-04-25 16:21:31
+2023-02-26,69,160001.0,18.0,2023-02-26,2023-02-28,96967.0,4000.0,APROVADA,7.0,8.0,373737.0,2000.0,,False,True,"purchase,product_item",2026-04-25 16:21:31
+2023-02-28,69,160001.0,18.0,2023-02-26,2023-02-28,96967.0,4000.0,APROVADA,7.0,8.0,373737.0,2000.0,nacional,False,True,purchase_extra_info,2026-04-25 16:21:31
+2023-03-12,69,160001.0,18.0,2023-02-26,2023-02-28,96967.0,4000.0,APROVADA,7.0,8.0,373737.0,2000.0,internacional,True,True,purchase_extra_info,2026-04-25 16:21:31

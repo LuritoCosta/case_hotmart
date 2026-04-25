@@ -118,6 +118,7 @@ dia em que a compra sofreu qualquer alteração em qualquer das 3 fontes.
    `is_gmv_eligible=FALSE` a partir do dia do evento.
 5. **Metadados** — `is_current`, `is_gmv_eligible`, `updated_sources`,
    `etl_loaded_at`.
+
 ### Regra de GMV — encapsulada na coluna `is_gmv_eligible`
  
 ```python
@@ -142,7 +143,7 @@ lugar (o ETL) e todas as consultas downstream continuam corretas.
 | Partição por `transaction_date` | Coluna física + key de partição |
 | Estado corrente fácil | `WHERE is_current = TRUE` |
 | Fonte A atualizou e B/C não, repete valor ativo | Forward fill (Passo 4) |
-| Ajudar usuário sem SQL avançado | Tabela wide + `is_gmv_eligible` pré-calculada |
+| Ajudar usuário sem SQL avançado | Tabela + `is_gmv_eligible` pré-calculada |
 | GMV exclui canceladas/reembolsadas | `purchase_status = 'APROVADA'` em `is_gmv_eligible` |
  
 ### Sobre as "lacunas" iniciais — decisão de design
@@ -174,7 +175,7 @@ valor hoje ou daqui a 5 anos.
  
 Validação executada no `03_simulacao_etl.py` (compra 55):
 - Com cutoff 31/03/2023 → `purchase_value = 50.00`
-- Sem cutoff (estado corrente) → `purchase_value = 55.00`
+
 Cada consulta isolada é determinística. ✓
  
 ---
