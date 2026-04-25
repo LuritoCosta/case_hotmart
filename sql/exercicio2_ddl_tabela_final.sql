@@ -4,52 +4,56 @@
 -- =============================================================================
 -- Tabela:  analytics.fct_purchase_history
 -- Grão:    1 linha por (purchase_id, transaction_date)
+-- Particionamento:  transaction_date
+--
 -- Objetivo:
 --   Snapshot diário, histórico e imutável de cada compra, consolidando as 3
 --   fontes de eventos (purchase, product_item, purchase_extra_info).
 --   Permite (1) calcular GMV diário por subsidiária, (2) navegar no tempo
---   ("como era o GMV de Jan/23 visto em 31/03/23 vs hoje"), e (3) recuperar
---   facilmente o estado corrente de cada compra via flag is_current.
---
--- Sintaxe: BigQuery / Snowflake-like (ajustar tipos para outros engines).
--- Se o target for Redshift/Postgres, trocar ARRAY<STRING> por TEXT[] e usar
--- a sintaxe de PARTITION equivalente.
+--   ("como era o GMV de Jan/23 visto em 31/03/23"), e (3) recuperar facilmente
+--   o estado corrente de cada compra via flag is_current.
 -- =============================================================================
- 
+
 CREATE TABLE IF NOT EXISTS analytics.fct_purchase_history (
     -- ---- Chaves e partição -------------------------------------------------
-    transaction_date      DATE       NOT NULL,   -- dia do evento (D-1) — PARTIÇÃO
-    purchase_id           INT64      NOT NULL,   -- chave natural da compra
- 
+    transaction_date      DATE         NOT NULL,
+    purchase_id           BIGINT       NOT NULL,
+
     -- ---- Campos vindos de `purchase` --------------------------------------
-    buyer_id              INT64,
-    prod_item_id          INT64,
+    buyer_id              BIGINT,
+    prod_item_id          BIGINT,
     order_date            DATE,
-    release_date          DATE,                  -- NULL = compra não paga
-    producer_id           INT64,
-    purchase_total_value  NUMERIC(18, 2),        -- valor total declarado na compra
-    purchase_status       STRING,                -- INICIADA | APROVADA | CANCELADA | REEMBOLSADA
- 
+    release_date          DATE,                   
+    producer_id           BIGINT,
+    purchase_total_value  DECIMAL(18, 2),
+    purchase_status       VARCHAR(20),             
+
     -- ---- Colunas de partição do lake (lineage / otimização) ---------------
-    purchase_partition    INT64,
-    prod_item_partition   INT64,
- 
+    purchase_partition    BIGINT,
+    prod_item_partition   BIGINT,
+
     -- ---- Campos vindos de `product_item` ----------------------------------
-    product_id            INT64,
-    item_quantity         INT64,
-    purchase_value        NUMERIC(18, 2),        -- valor do item (usado no GMV)
- 
+    product_id            BIGINT,
+    purchase_value        DECIMAL(18, 2),
+
     -- ---- Campo vindo de `purchase_extra_info` -----------------------------
-    subsidiary            STRING,                -- 'nacional' | 'internacional'
- 
+    subsidiary            VARCHAR(20),             
+
     -- ---- Metadados de rastreabilidade -------------------------------------
-    is_current            BOOL       NOT NULL,   -- TRUE = snapshot mais recente da compra
-    is_gmv_eligible       BOOL       NOT NULL,   -- TRUE = conta para GMV (paga e aprovada)
-    updated_sources       ARRAY<STRING>,         -- ex: ['purchase','product_item']
-    etl_loaded_at         TIMESTAMP  NOT NULL    -- quando o ETL escreveu a linha
-)
-PARTITION BY transaction_date
-CLUSTER BY purchase_id
-OPTIONS (
-    description = "Histórico diário e imutável de compras. 1 linha por (purchase_id, transaction_date). Consolida 3 fontes de evento com forward-fill. Fonte única de verdade para GMV. Coluna is_gmv_eligible pré-calcula a regra de negócio (release_date IS NOT NULL AND purchase_status='APROVADA') para que usuários finais não precisem conhecê-la."
+    is_current            BOOLEAN      NOT NULL,    -- TRUE = snapshot mais recente
+    is_gmv_eligible       BOOLEAN      NOT NULL,    -- TRUE = conta para GMV (paga e aprovada)
+    updated_sources       VARCHAR(100),             -- ex: 'purchase,product_item'
+    etl_loaded_at         TIMESTAMP    NOT NULL,    -- timestamp da carga
+
+    PRIMARY KEY (purchase_id, transaction_date)
 );
+
+CREATE INDEX IF NOT EXISTS idx_fct_is_current
+    ON analytics.fct_purchase_history (is_current)
+    WHERE is_current = TRUE;
+
+CREATE INDEX IF NOT EXISTS idx_fct_order_date
+    ON analytics.fct_purchase_history (order_date);
+
+CREATE INDEX IF NOT EXISTS idx_fct_release_date
+    ON analytics.fct_purchase_history (release_date);

@@ -1,199 +1,197 @@
-# Desafio Técnico Hotmart — Analytics Engineer
-
-Solução completa para os dois exercícios: SQL analítico e modelagem/ETL
-histórico para GMV diário por subsidiária.
-
-# Desafio Técnico Hotmart — Analytics Engineer
+# Case Hotmart — Analytics Engineer
  
-Solução completa para os dois exercícios: SQL analítico e modelagem/ETL
-histórico para GMV diário por subsidiária.
- 
----
- 
-## Estrutura dos entregáveis
-
-
-
-
-
-
-
-
-
+Solução para o desafio técnico da vaga de Analytics Engineer da Hotmart.
+Composta por dois exercícios: SQL analítico sobre tabelas correntes e
+modelagem/ETL histórico para GMV diário por subsidiária.
 
 ---
  
-## Regra de GMV — consolidada do PDF + vídeo + diagrama
+## 📁 Estrutura
  
-Uma compra compõe o GMV se e somente se **ambas** as condições forem verdadeiras:
- 
-1. `release_date IS NOT NULL` — pagamento foi efetuado (vídeo da Catarina)
-2. `purchase_status = 'APROVADA'` — não foi cancelada nem reembolsada
-   (do diagrama: status possíveis = INICIADA, APROVADA, CANCELADA, REEMBOLSADA;
-    e do PDF: *"pagamento foi efetuado e não foi cancelado"*)
-Esta regra é **materializada na coluna `is_gmv_eligible`** da tabela final —
-o usuário de negócio não precisa conhecer a regra composta, basta filtrar
-`WHERE is_gmv_eligible = TRUE`. Isto atende diretamente ao requisito *"a
-modelagem precisa ajudar pessoas que não possuem conhecimentos sólidos em SQL"*.
- 
+```
+case_hotmart/
+├── app/
+│   └── app.py                          # Orquestrador (roda os 2 scripts)
+├── data/
+│   ├── raw/                            # CSVs de entrada
+│   │   ├── purchase_current.csv        # tabela corrente (Exercício 1)
+│   │   ├── product_item_current.csv    # tabela corrente (Exercício 1)
+│   │   ├── purchase_events.csv         # eventos CDC (Exercício 2)
+│   │   ├── product_item_events.csv     # eventos CDC (Exercício 2)
+│   │   └── extra_info_events.csv       # eventos CDC (Exercício 2)
+│   └── specialized/
+│       └── fct_purchase_history.csv    # output do ETL
+├── sql/
+│   ├── exercicio1_pergunta1.sql        # Top 50 produtores em 2021
+│   ├── exercicio1_pergunta2.sql        # Top 2 produtos por produtor
+│   ├── exercicio2_ddl_tabela_final.sql # DDL fct_purchase_history
+│   └── exercicio2_consulta_final.sql   # GMV diário + navegação no tempo + auditoria
+├── src/
+│   ├── 01_gerar_bases.py               # Gera CSVs raw a partir do PDF
+│   ├── 02_testes_sql.py                # Executa SQL via DuckDB para validar
+│   └── 03_simulacao_etl.py             # ETL em pandas (5 passos)
+├── Desafio Técnico - AE.pdf
+├── .gitignore
+├── requirements.txt
+└── README.md
+```
+
 ---
+## 🚀 Como rodar
  
-## Exercício 1 — SQL
+```bash
+# 1. Instalar dependências
+pip install -r requirements.txt
  
-### Decisões-chave
+# 2. Rodar tudo de uma vez
+python app/app.py
  
-**Filtros aplicados em ambas as queries:**
-- `release_date IS NOT NULL`
-- `purchase_status = 'APROVADA'`
-  
-**Pergunta 1 — filtro temporal por `release_date`:** o faturamento é
-reconhecido no dia em que o pagamento foi efetuado, não no dia do pedido.
-Uma compra pedida em dez/2020 e paga em jan/2021 compõe o faturamento de
-1.    Se o time de negócios preferir `order_date`, troca-se a coluna do
-filtro — a arquitetura da query é a mesma.
+# Variações úteis:
+python app/app.py --skip-etl         # pular ETL
  
-**Pergunta 2 — `ROW_NUMBER` vs `RANK`:** usei `ROW_NUMBER` para garantir
-exatamente 2 produtos por produtor mesmo com empate. Troca-se para `RANK`
-se o negócio preferir "trazer todos os empatados".
- 
->**Join otimizado pelo particionamento:** `ON pi.prod_item_id =
->p.prod_item_id AND pi.prod_item_partition = p.prod_item_partition`. O
->segundo predicado permite ao engine fazer partition pruning no lado
->`product_item`, reduzindo significativamente o volume escaneado.
+# Ou rodar cada step manualmente
+cd src/
+python 01_gerar_bases.py
+python 04_simulacao_etl.py
+```
  
 ---
 
-## Exercício 2 — Modelagem e ETL
+## 📘 Exercício 1 — SQL
  
-### A tabela final: `analytics.fct_purchase_history`
+### Decisões aplicadas em ambas as queries
+ 
+**Filtros de negócio** (vídeo da Catarina + diagrama):
+- `release_date IS NOT NULL` — só faturamos se a compra foi paga
+- `purchase_status = 'APROVADA'` — exclui INICIADA, CANCELADA, REEMBOLSADA
+
+**Cálculo do faturamento:**
+```sql
+SUM(purchase_value)
+```
+Cada linha da tabela `purchase` representa uma ocorrência completa de venda.
+O `purchase_value` em `product_item` traz o valor da compra associada,
+então o faturamento é a soma simples desse valor para as compras que
+atendem aos filtros de negócio. O campo `item_quantity` é informação
+agregadora da compra que não é considerada no cálculo de faturamento
+neste exercício.
+ 
+**Join otimizado:** `prod_item_id + prod_item_partition` para permitir partition
+pruning quando estas tabelas estiverem em um data lake particionado.
+ 
+### Pergunta 1 — Top 50 produtores em 2021
+ 
+Filtro temporal por `release_date` (faturamento é reconhecido no dia do
+pagamento, não do pedido). Uma compra pedida em dez/2020 e paga em jan/2021
+entra no faturamento de 2021.
+ 
+### Pergunta 2 — Top 2 produtos por produtor
+ 
+CTE com agregação por `(producer_id, product_id)`, depois `ROW_NUMBER()`
+particionado por produtor. Sem recorte temporal (a pergunta não especifica).
+ 
+`ROW_NUMBER` foi escolhido sobre `RANK` para garantir exatamente 2 produtos
+por produtor mesmo com empate. Tiebreaker em `product_id ASC` para
+reprodutibilidade.
+ 
+---
+ 
+## 📗 Exercício 2 — Modelagem e ETL
+ 
+### Tabela: `analytics.fct_purchase_history`
  
 **Grão:** 1 linha por `(purchase_id, transaction_date)` — um snapshot por
 dia em que a compra sofreu qualquer alteração em qualquer das 3 fontes.
  
-**Colunas principais:**
-- Identidade e tempo: `purchase_id`, `transaction_date` (partição)
-- De `purchase`: `buyer_id`, `prod_item_id`, `order_date`, `release_date`,
-  `producer_id`, `purchase_total_value`, **`purchase_status`**
-- Partições do lake: `purchase_partition`, `prod_item_partition` (lineage/otimização)
-- De `product_item`: `product_id`, `item_quantity`, `purchase_value`
-- De `purchase_extra_info`: `subsidiary`
-- Metadados: `is_current`, **`is_gmv_eligible`**, `updated_sources`, `etl_loaded_at`
-### Por que esse grão?
-- Consulta por estado corrente é trivial: `WHERE is_current = TRUE`.
-- Navegação no tempo é trivial: `WHERE transaction_date <= :cutoff`.
-- Auditoria é trivial: `SELECT * WHERE purchase_id = X ORDER BY transaction_date`.
-- Particionamento por `transaction_date` casa com pipeline D-1: cada run
-  só toca a partição do dia.
-### O algoritmo (5 passos)
+**Partição:** `transaction_date` (D-1 via pipeline diário).
  
-1. **Deduplicação intradiária.** Cada fonte é CDC, pode ter múltiplos
-   eventos no mesmo dia para a mesma compra. Pegamos o último
-   (`ROW_NUMBER() OVER (PARTITION BY purchase_id, transaction_date ORDER BY transaction_datetime DESC) = 1`).
-2. **Esqueleto.** UNION dos `(purchase_id, transaction_date)` das 3
-   fontes. Guardo flags `has_*` para registrar quais fontes dispararam
-   a linha.
-3. **Join.** LEFT JOIN do esqueleto com cada fonte. Dias em que uma
-   fonte não atualizou ficam NULL nos campos daquela fonte.
-4. **Forward fill.** `LAST_VALUE(col IGNORE NULLS) OVER (PARTITION BY
-   purchase_id ORDER BY transaction_date ROWS UNBOUNDED PRECEDING)`.
-   Propaga o último valor não-nulo conhecido de cada campo para os
-   dias seguintes da mesma compra. Nota importante: `purchase_status`
-   também é forward-filled — se uma compra for cancelada retroativamente,
-   o status 'CANCELADA' propaga e `is_gmv_eligible` passa a FALSE a
-   partir daquele `transaction_date`.
-5. **Metadados.** `is_current`, `is_gmv_eligible` (regra de negócio),
-   `updated_sources` (array das fontes), `etl_loaded_at`.
-### Requisitos do enunciado — como cada um é atendido
+### Algoritmo (5 passos no ETL)
  
-| Requisito | Como é atendido |
+1. **Deduplicação intradiária** — último evento do dia por fonte
+   (`drop_duplicates(keep='last')` ordenado por `transaction_datetime`).
+2. **Esqueleto** — UNION dos `(purchase_id, transaction_date)` das 3 fontes
+   com flags `has_purchase`, `has_product_item`, `has_extra_info`.
+3. **Join** — left merge do esqueleto com as 3 fontes deduplicadas.
+4. **Forward fill** — `groupby('purchase_id').ffill()` ordenado por
+   `transaction_date` propaga os últimos valores conhecidos por compra.
+   Inclui `purchase_status` — cancelamentos retroativos viram
+   `is_gmv_eligible=FALSE` a partir do dia do evento.
+5. **Metadados** — `is_current`, `is_gmv_eligible`, `updated_sources`,
+   `etl_loaded_at`.
+### Regra de GMV — encapsulada na coluna `is_gmv_eligible`
+ 
+```python
+is_gmv_eligible = (release_date IS NOT NULL) AND (purchase_status == 'APROVADA')
+```
+ 
+**Por que essa coluna existe?** O enunciado pede explicitamente *"a
+modelagem precisa ajudar pessoas que não possuem conhecimentos sólidos em
+SQL"*. Em vez do usuário lembrar de uma regra composta, basta filtrar a
+flag. Se a regra mudar (ex.: incluir `'ESTORNADA'`), muda em um único
+lugar (o ETL) e todas as consultas downstream continuam corretas.
+ 
+### Como cada requisito é atendido
+ 
+| Requisito | Implementação |
 |---|---|
-| Histórico e imutável | Cada evento vira uma linha; nunca se atualiza linha existente. Reprocessamento full produz o mesmo resultado (eventos são imutáveis). |
-| Passado não muda no reprocess | Idempotência por construção: o ETL é uma função pura dos eventos. |
-| Rastreabilidade diária | Grão diário + coluna `updated_sources`. |
-| Navegação no tempo | `WHERE transaction_date <= :cutoff` + último snapshot por purchase_id. |
-| D-1 | O pipeline roda com `transaction_date = CURRENT_DATE - 1`. |
-| Partição por `transaction_date` | `PARTITION BY transaction_date` no DDL. |
-| Estado corrente fácil | `WHERE is_current = TRUE`. |
-| Se fonte A atualizou e B/C não, repete valores ativos | Passo 4 (forward fill). |
-| Ajuda quem não sabe SQL avançado | Tabela wide (todos os campos resolvidos) + `is_gmv_eligible` materializada — usuário só faz `SUM` + `GROUP BY`. |
-| GMV exclui canceladas/reembolsadas | `purchase_status = 'APROVADA'` em `is_gmv_eligible`. |
+| Histórico e imutável | Cada evento gera nova linha; nunca se edita linha existente |
+| Passado não muda no reprocess | Eventos imutáveis + ETL como função pura → idempotente |
+| Rastreabilidade diária | Grão `(purchase_id, transaction_date)` + `updated_sources` |
+| Navegação no tempo | `WHERE transaction_date <= :cutoff` + último snapshot |
+| D-1 | Pipeline lê `transaction_date = CURRENT_DATE - 1` em produção |
+| Partição por `transaction_date` | Coluna física + key de partição |
+| Estado corrente fácil | `WHERE is_current = TRUE` |
+| Fonte A atualizou e B/C não, repete valor ativo | Forward fill (Passo 4) |
+| Ajudar usuário sem SQL avançado | Tabela wide + `is_gmv_eligible` pré-calculada |
+| GMV exclui canceladas/reembolsadas | `purchase_status = 'APROVADA'` em `is_gmv_eligible` |
  
-### Sobre a "navegação no tempo" — nuance importante
+### Sobre as "lacunas" iniciais — decisão de design
+ 
+A tabela final tem alguns NULLs nas primeiras linhas de algumas compras.
+Isso é **comportamento intencional**, não bug.
+ 
+Exemplo da compra 56:
+- 25/01/2023: chegaram `product_item` e `extra_info`, mas `purchase` ainda não → campos de purchase ficam NULL
+- 26/01/2023: `purchase` chega → linha completa
+Forward fill **não pode** preencher os NULLs do dia 25 porque não havia
+"valor anterior" — a compra simplesmente ainda não tinha sido vista pelo
+data lake. Backward fill seria possível, mas violaria a imutabilidade do
+passado: estaríamos inventando que sabíamos algo no dia 25 que só ficamos
+sabendo no dia 26.
+ 
+**Estratégia adotada: forward fill apenas.** A regra do enunciado fala em
+*"dados ATIVOS das demais"* — se não há dado ativo, não há o que repetir.
+O NULL inicial é registro honesto do que o data lake conhecia naquele
+momento.
+ 
+### Sobre "navegação no tempo" — nuance importante
  
 O PDF diz: *"os valores retornados pela consulta não podem ser diferentes"*.
  
-Isto **não** significa que "GMV de Jan/23 visto em 31/03" = "GMV de Jan/23
+Isso **não** significa que "GMV de Jan/23 visto em 31/03" = "GMV de Jan/23
 visto hoje". O vídeo da Catarina é claro: se uma compra foi alterada em
-fev/23, o GMV retrospectivo de janeiro muda.
+fev/23, o GMV retrospectivo muda.
  
-O que o requisito significa é: **uma consulta com um cutoff específico é
-100% reprodutível**. A consulta "GMV de Jan/23 com cutoff em 31/03/2023"
-retorna o mesmo valor hoje ou daqui a 5 anos — porque a tabela é imutável
-e o cutoff está explícito.
+O requisito significa: **uma consulta com cutoff específico é 100%
+reprodutível**. "GMV de Jan/23 com cutoff em 31/03/2023" retorna o mesmo
+valor hoje ou daqui a 5 anos.
  
-### Validação com os dados do PDF
- 
-`simulacao_etl.py` roda a lógica completa sobre os dados exatos do
-enunciado (com `purchase_status` e `purchase_total_value` inferidos).
-Resultados reais da execução:
- 
-**Dataset final populado** — 10 linhas:
-- Compra 55: 5 snapshots (20/01, 23/01, 05/02, 12/07, 15/07)
-- Compra 56: 2 snapshots (25/01, 26/01)
-- Compra 69: 3 snapshots (26/02, 28/02, 12/03)
- 
-**GMV corrente por subsidiária (executado):**
-
-| data_compra | subsidiaria | gmv |
-|---|---|---|
-| 2023-01-20 | nacional | 55.00 |
-| 2023-02-26 | internacional | 2000.00 |
- 
-**Compra 56 não aparece** — `is_gmv_eligible = FALSE` porque
-`purchase_status = 'INICIADA'` e `release_date IS NULL`.
- 
-**Compra 69** aparece como internacional (última atualização da
-subsidiária em 12/03 sobrescreveu "nacional" de 28/02).
- 
-**Navegação no tempo — compra 55 (executado):**
-- GMV Jan/23 com cutoff em 31/03/2023 → R$ 50,00
-- GMV Jan/23 sem cutoff (hoje) → R$ 55,00
-Cada uma das duas consultas, **com seus cutoffs fixos**, é 100%
-reprodutível.
+Validação executada no `04_simulacao_etl.py` (compra 55):
+- Com cutoff 31/03/2023 → `purchase_value = 50.00`
+- Sem cutoff (estado corrente) → `purchase_value = 55.00`
+Cada consulta isolada é determinística. ✓
  
 ---
+
+## 🛠 Stack
  
-## Tech stack sugerida
+- **Python 3.10+**
+- **pandas** — ETL (5 passos sobre DataFrames)
+- **DuckDB** — execução do SQL ANSI puro sobre arquivos CSV (Exercício 1)
+
+Em produção, a stack seria evoluída para um data lake distribuído (S3 +
+Spark/Glue + Athena, ou equivalente em GCP/Azure). O algoritmo
+do ETL é o mesmo — apenas a engine muda. As 5 etapas são todas window
+functions e joins padrão SQL/Spark.
  
-| Camada | Escolha | Por quê |
-|---|---|---|
-| Armazenamento | **Delta Lake** (S3/GCS/ADLS) em formato Parquet particionado | ACID transactions + time travel nativo, reforça a propriedade de imutabilidade. |
-| Processamento | **PySpark** no Databricks/EMR/Dataproc | Escala horizontal; window functions nativas; suporte a `LAST_VALUE IGNORE NULLS`. |
-| Orquestração | **Airflow** ou **Dagster** | DAG com dependências das 3 fontes raw → fct_purchase_history → consumidores. |
-| Transformação declarativa (alternativa) | **dbt** sobre BigQuery/Snowflake | O script PySpark é uma sequência de SQLs — traduz 1:1 para modelos dbt; cada passo vira um CTE/modelo separado com testes. |
-| Data quality | **Great Expectations** ou testes dbt | Testes: unicidade de `(purchase_id, transaction_date)`; `is_current` exatamente 1 por `purchase_id`; `purchase_value >= 0`; `purchase_status IN ('INICIADA','APROVADA','CANCELADA','REEMBOLSADA')`; `subsidiary IN ('nacional','internacional')`. |
-| BI / consumo | Metabase / Looker / Hex | Exposição de `fct_purchase_history` como fonte única de verdade; `is_gmv_eligible` já embute a regra. |
- 
-### Qualidade de dados — casos tratados
- 
-- Eventos duplicados no mesmo dia → resolvido no Passo 1 (último evento vence).
-- `release_date IS NULL` (compra não paga) → excluída do GMV via
-  `is_gmv_eligible`, mas **mantida no histórico** (aparece até ser paga
-  ou cancelada).
-- `purchase_status = 'CANCELADA'` ou `'REEMBOLSADA'` → excluída do GMV
-  via `is_gmv_eligible`, mas mantida no histórico para auditoria.
-- Primeira linha de uma compra onde uma fonte não chegou ainda
-  (ex.: compra 56 no dia 25/01 com campos de `purchase` NULL) →
-  mantida no histórico; o forward fill preenche quando a fonte chega.
-- Reenvio de eventos (correção retroativa) → absorvido automaticamente
-  no próximo run do ETL; gera novo snapshot com novo `transaction_date`.
-### Evolução para produção (incremental)
- 
-O script atual faz full refresh para simplicidade. Em produção:
-1. Ler apenas `transaction_date = CURRENT_DATE - 1` de cada fonte.
-2. Identificar `purchase_id`s afetados.
-3. Reprocessar o forward fill desses `purchase_id`s (desde a primeira
-   aparição ou desde o último snapshot consolidado).
-4. MERGE na partição `CURRENT_DATE - 1` da tabela final.
-5. Recalcular `is_current` para os `purchase_id`s afetados (vira FALSE na
-   linha anteriormente current, TRUE na nova linha inserida).
+---
