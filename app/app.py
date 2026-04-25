@@ -3,10 +3,9 @@
 DESAFIO TÉCNICO HOTMART - ANALYTICS ENGINEER
 app/app.py — Orquestrador
 =============================================================================
-Executa os 4 scripts em sequência:
+Executa os 2 scripts em sequência:
     1) src/01_gerar_bases.py          — gera CSVs em data/raw/
-    2) src/02_teste_sql.py            — testes de SQL (Exercício 1)
-    4) src/03_simulacao_etl.py        — ETL fct_purchase_history
+    2) src/03_simulacao_etl.py        — ETL fct_purchase_history
 
 Para um pipeline real este orquestrador seria substituído por Airflow,
 Dagster ou Prefect — o ponto de cada step e suas dependências fica
@@ -68,8 +67,6 @@ def run_step(name: str, script: str, description: str) -> bool:
 
 def main():
     parser = argparse.ArgumentParser(description='Orquestrador do case Hotmart')
-    parser.add_argument('--skip-teste', action='store_true',
-                        help='Pula os scripts do Exercício 1')
     parser.add_argument('--skip-etl', action='store_true',
                         help='Pula o ETL')
     parser.add_argument('--only-etl', action='store_true',
@@ -80,8 +77,6 @@ def main():
     steps_to_run = list(STEPS)
     if args.only_etl:
         steps_to_run = [s for s in STEPS if s[0] in ('gerar_bases', 'etl')]
-    if args.skip_teste:
-        steps_to_run = [s for s in steps_to_run if not s[0].startswith('teste_')]
     if args.skip_etl:
         steps_to_run = [s for s in steps_to_run if s[0] != 'etl']
 

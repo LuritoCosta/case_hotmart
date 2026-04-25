@@ -52,7 +52,7 @@ python app/app.py --skip-etl         # pular ETL
 # Ou rodar cada step manualmente
 cd src/
 python 01_gerar_bases.py
-python 04_simulacao_etl.py
+python 03_simulacao_etl.py
 ```
  
 ---
@@ -176,7 +176,7 @@ O requisito significa: **uma consulta com cutoff específico é 100%
 reprodutível**. "GMV de Jan/23 com cutoff em 31/03/2023" retorna o mesmo
 valor hoje ou daqui a 5 anos.
  
-Validação executada no `04_simulacao_etl.py` (compra 55):
+Validação executada no `03_simulacao_etl.py` (compra 55):
 - Com cutoff 31/03/2023 → `purchase_value = 50.00`
 - Sem cutoff (estado corrente) → `purchase_value = 55.00`
 Cada consulta isolada é determinística. ✓

@@ -1,7 +1,7 @@
 """
 =============================================================================
 DESAFIO TÉCNICO HOTMART - ANALYTICS ENGINEER
-Script: 04_simulacao_etl.py
+Script: 03_simulacao_etl.py
 =============================================================================
 ETL em pandas que constrói a tabela histórica fct_purchase_history
 a partir das 3 tabelas de eventos.

@@ -12,7 +12,7 @@
 -- 1. CONSULTA PRINCIPAL (entregável): GMV DIÁRIO POR SUBSIDIÁRIA — CORRENTE
 -- =============================================================================
 SELECT
-    order_date                                AS data_compra,
+    release_date                                AS data_compra,
     subsidiary                                AS subsidiaria,
     SUM(purchase_value)                       AS gmv
 FROM analytics.fct_purchase_history
@@ -20,7 +20,7 @@ WHERE
     is_current      = TRUE
     AND is_gmv_eligible = TRUE
 GROUP BY
-    order_date,
+    release_date,
     subsidiary
 ORDER BY
     data_compra,
@@ -41,7 +41,6 @@ WITH snapshot_em_cutoff AS (
         release_date,
         purchase_status,
         subsidiary,
-        item_quantity,
         purchase_value,
         ROW_NUMBER() OVER (
             PARTITION BY purchase_id
@@ -79,9 +78,7 @@ SELECT
     purchase_id,
     release_date,
     purchase_status,
-    item_quantity,
     purchase_value,
-    purchase_value AS valor_total_item,
     subsidiary,
     is_gmv_eligible,
     updated_sources,
