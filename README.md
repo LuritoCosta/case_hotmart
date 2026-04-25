@@ -168,10 +168,6 @@ momento.
  
 O PDF diz: *"os valores retornados pela consulta não podem ser diferentes"*.
  
-Isso **não** significa que "GMV de Jan/23 visto em 31/03" = "GMV de Jan/23
-visto hoje". O vídeo da Catarina é claro: se uma compra foi alterada em
-fev/23, o GMV retrospectivo muda.
- 
 O requisito significa: **uma consulta com cutoff específico é 100%
 reprodutível**. "GMV de Jan/23 com cutoff em 31/03/2023" retorna o mesmo
 valor hoje ou daqui a 5 anos.
